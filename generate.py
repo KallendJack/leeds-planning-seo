@@ -12,6 +12,11 @@ STATIC_SRC = Path(__file__).parent / "static"   # source assets copied into the 
 PAGE_SIZE = 50
 SITE_URL = "https://leedsplanning.org.uk"
 
+# A UK postcode's "outcode" is the part before the space: "LS20 8JB" -> "LS20".
+# Taking a fixed 3-char prefix is wrong — it folds LS20-LS29 all into "LS2".
+OUTCODE_SQL = ("CASE WHEN INSTR(postcode,' ') > 0 "
+               "THEN SUBSTR(postcode,1,INSTR(postcode,' ')-1) ELSE postcode END")
+
 # Affiliate link — drop in your Bark.com / Awin link here when ready
 AFFILIATE_LINK = ""
 
@@ -72,8 +77,8 @@ async def build_homepage(db: aiosqlite.Connection):
     for t in top_types:
         t["icon"] = type_icons.get(t["label"], "📄")
 
-    postcode_rows = await db.execute_fetchall("""
-        SELECT SUBSTR(postcode,1,3) as code, COUNT(*) as cnt
+    postcode_rows = await db.execute_fetchall(f"""
+        SELECT {OUTCODE_SQL} as code, COUNT(*) as cnt
         FROM applications WHERE postcode LIKE 'LS%' AND postcode != ''
         GROUP BY code ORDER BY cnt DESC LIMIT 12
     """)
@@ -104,11 +109,11 @@ async def build_application_pages(db: aiosqlite.Connection):
         app = dict(zip(cols, row))
 
         nearby = []
-        if app.get("postcode") and len(app["postcode"]) >= 3:
-            prefix = app["postcode"][:3]
+        if app.get("postcode"):
+            prefix = app["postcode"].split()[0]          # outcode, e.g. "LS20"
             near_rows = await db.execute_fetchall(
                 "SELECT uid, address, app_type FROM applications WHERE postcode LIKE ? AND uid != ? LIMIT 5",
-                (f"{prefix}%", app["uid"])
+                (f"{prefix} %", app["uid"])
             )
             nearby = [{"uid": r[0], "address": r[1], "app_type": r[2]} for r in near_rows]
 
@@ -164,8 +169,8 @@ async def build_postcode_pages(db: aiosqlite.Connection):
     print("Building postcode pages...")
     tpl = env.get_template("listing.html")
 
-    areas = await db.execute_fetchall("""
-        SELECT SUBSTR(postcode,1,3) as code, COUNT(*) as cnt
+    areas = await db.execute_fetchall(f"""
+        SELECT {OUTCODE_SQL} as code, COUNT(*) as cnt
         FROM applications WHERE postcode LIKE 'LS%' AND postcode != ''
         GROUP BY code ORDER BY cnt DESC
     """)
@@ -212,8 +217,8 @@ async def build_postcode_pages(db: aiosqlite.Connection):
 
     for code, total in areas:
         rows = await db.execute_fetchall(
-            "SELECT uid, address, description, app_type, app_size, app_state, start_date, decided_date, postcode FROM applications WHERE postcode LIKE ? ORDER BY start_date DESC",
-            (f"{code}%",)
+            "SELECT uid, address, description, app_type, app_size, app_state, start_date, decided_date, postcode FROM applications WHERE postcode = ? OR postcode LIKE ? ORDER BY start_date DESC",
+            (code, f"{code} %")
         )
         dir = OUTPUT_DIR / "postcode" / code.lower()
 
