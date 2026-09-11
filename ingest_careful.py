@@ -36,7 +36,7 @@ DB = Path("/workspace/dev/leeds-planning-seo/data/leeds_planning.db")
 PAGE = 300                 # API default page size — minimises request count
 START_DELAY = 3            # optimistic initial gap between requests (seconds)
 MIN_BURST = 8              # assumed requests per PlanIt window (floors the estimate)
-MAX_DELAY = 80             # ceiling on the learned interval (seconds)
+MAX_DELAY = 300            # ceiling on the learned interval (seconds)
 MAX_PAGE_RETRIES = 5
 
 COLS = ("uid,address,postcode,description,app_type,app_size,app_state,"
