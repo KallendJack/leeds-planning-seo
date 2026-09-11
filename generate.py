@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Leeds Planning SEO — Static Site Generator. Reads SQLite → Jinja2 → static HTML."""
 
-import asyncio, aiosqlite, math, time
+import asyncio, aiosqlite, math, shutil, time
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 DB_PATH = Path(__file__).parent / "data" / "leeds_planning.db"
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 OUTPUT_DIR = Path(__file__).parent / "output"
+STATIC_SRC = Path(__file__).parent / "static"   # source assets copied into the build
 PAGE_SIZE = 50
 SITE_URL = "https://leedsplanning.org.uk"
 
@@ -313,8 +314,42 @@ async def build_sitemap(db: aiosqlite.Connection):
     print(f"  {len(set(urls))} URLs")
 
 
+def clean_output():
+    """Empty the output dir before a build.
+
+    Without this, pages for applications that have dropped out of the 365-day
+    window (or been re-referenced) linger on disk and keep being served even
+    though they are no longer in the DB or the sitemap.  We clear the CONTENTS
+    rather than removing OUTPUT_DIR itself, so a bind mount / serving path
+    stays intact.
+    """
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for child in OUTPUT_DIR.iterdir():
+        if child.is_dir():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+
+
+def copy_static():
+    """Copy source assets (static/) into the build.
+
+    style.css used to live only in the gitignored output dir, so a clean
+    rebuild would have silently produced a site with no stylesheet.
+    """
+    if not STATIC_SRC.exists():
+        return
+    dest = OUTPUT_DIR / "static"
+    dest.mkdir(parents=True, exist_ok=True)
+    for f in STATIC_SRC.iterdir():
+        if f.is_file():
+            shutil.copy2(f, dest / f.name)
+
+
 async def main():
     start = time.time()
+    clean_output()
+    copy_static()
     async with aiosqlite.connect(str(DB_PATH)) as db:
         db.row_factory = aiosqlite.Row
 

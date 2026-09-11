@@ -1,0 +1,216 @@
+/* Leeds Planning — standardized UK directory */
+:root {
+    --slate-50: #f8fafc; --slate-100: #f1f5f9; --slate-200: #e2e8f0;
+    --slate-300: #cbd5e1; --slate-400: #94a3b8; --slate-500: #64748b;
+    --slate-600: #475569; --slate-700: #334155; --slate-800: #1e293b;
+    --slate-900: #0f172a;
+    --green-50: #f0fdf4; --green-600: #16a34a; --green-700: #15803d;
+    --amber-50: #fffbeb; --amber-600: #d97706; --amber-700: #b45309;
+    --red-50: #fef2f2; --red-600: #dc2626; --red-700: #b91c1c;
+    --blue-50: #eff6ff; --blue-200: #bfdbfe; --blue-600: #2563eb;
+    --blue-700: #1d4ed8; --blue-900: #1e3a8a;
+    --card-border: #e2e8f0;
+    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+    --card-hover-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    --card-hover-border: #cbd5e1;
+    --card-radius: 8px;
+    --transition: all 0.2s ease-in-out;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    line-height: 1.6; color: var(--slate-900);
+    background-color: #f8fafc;
+    display: flex; flex-direction: column; min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+}
+.container { max-width: 1024px; margin: 0 auto; padding: 0 1rem; }
+main.container { flex: 1; }
+
+/* === BASE ELEMENTS === */
+a { color: var(--blue-600); text-decoration: none; transition: var(--transition); }
+a:hover { color: var(--blue-700); text-decoration: underline; }
+
+/* === HEADER === */
+body > header { background: var(--slate-900); color: white; padding: 1rem 0; }
+nav { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+.logo { color: white; text-decoration: none; font-size: 1.25rem; font-weight: 700; }
+.logo:hover { text-decoration: none; }
+.nav-links { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+.nav-links a { color: var(--slate-300); text-decoration: none; font-size: 0.875rem; }
+.nav-links a:hover { color: white; text-decoration: none; }
+
+/* === BREADCRUMBS === */
+.breadcrumb {
+    font-size: 0.875rem; color: var(--slate-500);
+    margin-bottom: 1.5rem; display: flex; gap: 0.5rem;
+    padding: 1rem 0 0 0;
+}
+.breadcrumb a { color: var(--slate-500); text-decoration: none; }
+.breadcrumb a:hover { color: var(--slate-900); text-decoration: underline; }
+.breadcrumb .crumb-sep { color: var(--slate-400); user-select: none; }
+.breadcrumb .crumb-current { color: var(--slate-900); font-weight: 500; }
+
+/* === TYPOGRAPHY === */
+.page-heading { font-size: 1.75rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.25rem; }
+.results-summary { color: var(--slate-500); margin-bottom: 1.25rem; font-size: 0.875rem; }
+
+/* === HERO (homepage only) === */
+.hero-planning { text-align: center; padding: 3.5rem 0 2.5rem; }
+.hero-planning h1 { font-size: 2.25rem; margin-bottom: 0.5rem; color: var(--slate-900); }
+.hero-subtitle { color: var(--slate-600); font-size: 1.125rem; max-width: 650px; margin: 0 auto; }
+
+/* === SHARED CARD PATTERN === */
+.stat-card, .explore-card, .postcode-card, .app-card,
+.app-main section, .app-sidebar section {
+    background: white;
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+    transition: var(--transition);
+}
+
+/* Stats */
+.quick-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 2rem 0; }
+.stat-card { padding: 1.5rem 1.25rem; text-align: center; }
+.stat-number { display: block; font-size: 2rem; font-weight: 700; color: var(--slate-900); }
+.stat-label { display: block; font-size: 0.75rem; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+
+/* Explore grid */
+.explore { margin: 3rem 0; }
+.explore h2 { margin-bottom: 1rem; color: var(--slate-900); }
+.explore-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.explore-card { display: block; padding: 1.5rem; text-decoration: none; color: var(--slate-900); }
+.explore-card:hover { box-shadow: var(--card-hover-shadow); border-color: var(--card-hover-border); transform: translateY(-2px); }
+.explore-icon { font-size: 1.5rem; display: block; margin-bottom: 0.5rem; }
+.explore-card h3 { font-size: 1rem; margin-bottom: 0.25rem; }
+.explore-card p { font-size: 0.8125rem; color: var(--slate-500); }
+
+/* Postcode grid */
+.by-postcode { margin: 3rem 0; }
+.by-postcode h2 { color: var(--slate-900); margin-bottom: 1rem; }
+.postcode-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+.postcode-card { display: block; padding: 1.25rem; text-decoration: none; color: var(--slate-900); }
+.postcode-card:hover { box-shadow: var(--card-hover-shadow); border-color: var(--blue-600); transform: translateY(-2px); }
+.postcode-card strong { display: block; font-size: 1.25rem; color: var(--slate-900); }
+.postcode-card span { display: block; font-size: 0.8rem; color: var(--slate-500); margin-top: 0.25rem; }
+
+/* Application list cards */
+.app-list { display: flex; flex-direction: column; gap: 0.75rem; margin: 1.5rem 0; }
+.app-card:hover { box-shadow: var(--card-hover-shadow); border-color: var(--card-hover-border); transform: translateY(-2px); }
+.card-inner { padding: 1.25rem; position: relative; }
+
+/* Status badge — top-right pill */
+.status-badge {
+    position: absolute; top: 1.25rem; right: 1.25rem;
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    padding: 0.25rem 0.75rem; border-radius: 9999px;
+    font-size: 0.75rem; font-weight: 600; text-transform: capitalize;
+}
+.badge-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.status-permitted, .status-approved { background: var(--green-50); color: var(--green-700); }
+.status-permitted .badge-dot, .status-approved .badge-dot { background: var(--green-600); }
+.status-undecided, .status-unresolved { background: var(--amber-50); color: var(--amber-700); }
+.status-undecided .badge-dot, .status-unresolved .badge-dot { background: var(--amber-600); }
+.status-refused, .status-rejected { background: var(--red-50); color: var(--red-700); }
+.status-refused .badge-dot, .status-rejected .badge-dot { background: var(--red-600); }
+.status-withdrawn { background: var(--slate-100); color: var(--slate-600); }
+.status-withdrawn .badge-dot { background: var(--slate-400); }
+.status-conditions { background: var(--blue-50); color: var(--blue-900); }
+.status-conditions .badge-dot { background: var(--blue-600); }
+
+/* Card text */
+.card-address {
+    font-size: 1.05rem; font-weight: 600; margin-bottom: 0.375rem;
+    padding-right: 110px;
+}
+.card-address a { color: var(--slate-900); text-decoration: none; transition: var(--transition); }
+.card-address a:hover { color: var(--blue-600); text-decoration: none; }
+.card-description {
+    font-size: 0.875rem; color: var(--slate-700); line-height: 1.6;
+    margin-bottom: 0.5rem; padding-right: 110px;
+}
+.card-meta { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.75rem; color: var(--slate-500); }
+.card-meta span { white-space: nowrap; }
+.meta-link { color: var(--slate-500); text-decoration: none; font-weight: 500; }
+.meta-link:hover { color: var(--blue-600); }
+
+/* Affiliate banner (every 5th card) */
+.affiliate-banner {
+    background: var(--blue-50); border: 1px solid var(--blue-200);
+    border-radius: var(--card-radius); padding: 1rem 1.25rem; margin: 0.75rem 0;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 0.75rem;
+}
+.banner-text { font-weight: 600; color: var(--blue-900); font-size: 0.95rem; }
+.banner-sub { color: var(--blue-600); font-size: 0.85rem; margin-top: 0.125rem; }
+.banner-btn {
+    background: var(--blue-600); color: white; padding: 0.5rem 1.25rem;
+    border-radius: 6px; font-weight: 500; font-size: 0.85rem;
+    text-decoration: none; white-space: nowrap; transition: var(--transition);
+    display: inline-block;
+}
+.banner-btn:hover { background: var(--blue-700); text-decoration: none; color: white; }
+
+/* === DETAIL PAGE === */
+.app-detail-page { padding: 0 0 2rem 0; }
+.app-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; }
+.app-header h1 { font-size: 1.5rem; color: var(--slate-900); flex: 1; }
+.app-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+.app-main section, .app-sidebar section { padding: 1.5rem; margin-bottom: 1.5rem; }
+.app-sidebar ul { padding-left: 1.25rem; margin: 0.5rem 0; }
+.app-sidebar li { margin-bottom: 0.375rem; line-height: 1.5; }
+.app-main h2, .app-sidebar h3 { margin-bottom: 0.75rem; color: var(--slate-900); }
+dl { display: grid; grid-template-columns: 130px 1fr; gap: 0.5rem; }
+dt { font-weight: 600; color: var(--slate-500); }
+dd { color: var(--slate-800); }
+.affiliate-cta { background: var(--blue-50); border: 1px solid var(--blue-200); padding: 1.5rem; margin-bottom: 1.5rem; }
+.affiliate-cta h3 { color: var(--blue-900); margin-bottom: 0.5rem; }
+.affiliate-cta p { color: var(--slate-700); font-size: 0.875rem; margin-bottom: 1rem; }
+
+/* === BUTTONS === */
+.btn {
+    display: inline-block; padding: 0.5rem 1rem; border-radius: 6px;
+    font-weight: 500; font-size: 0.875rem; text-align: center;
+    transition: var(--transition); text-decoration: none !important;
+    border: 1px solid transparent; cursor: pointer;
+}
+.btn-primary { background: var(--blue-600); color: white; }
+.btn-primary:hover { background: var(--blue-700); transform: translateY(-1px); color: white; text-decoration: none; }
+.btn-outline { background: transparent; border-color: var(--slate-300); color: var(--slate-700); }
+.btn-outline:hover { background: var(--slate-100); border-color: var(--slate-400); color: var(--slate-900); }
+.btn-small { font-size: 0.75rem; padding: 0.375rem 0.75rem; }
+
+/* Map overrides for btn-primary (our CTA buttons) */
+.btn-cta { background: var(--blue-600); color: white; border-radius: 6px; transition: var(--transition); }
+.btn-cta:hover { background: var(--blue-700); color: white; text-decoration: none; transform: translateY(-1px); }
+
+/* === PAGINATION === */
+.pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 1.5rem 0; }
+.pagination a { color: var(--blue-600); text-decoration: none; padding: 0.375rem 0.75rem; border: 1px solid var(--slate-200); border-radius: 6px; font-size: 0.875rem; transition: var(--transition); }
+.pagination a:hover { background: var(--slate-100); border-color: var(--slate-300); text-decoration: none; }
+.page-info { color: var(--slate-500); font-size: 0.875rem; }
+
+/* === RELATED === */
+.related { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--slate-200); }
+.related h2 { margin-bottom: 0.75rem; color: var(--slate-900); }
+.related ul { list-style: none; }
+.related li { margin-bottom: 0.25rem; }
+
+/* === FOOTER === */
+footer { background: var(--slate-900); color: var(--slate-300); padding: 2rem 0; font-size: 0.8125rem; }
+.footer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem; }
+footer a { color: var(--slate-300); }
+footer strong { color: white; display: block; margin-bottom: 0.5rem; }
+.footer-bottom { text-align: center; padding-top: 1rem; border-top: 1px solid #334155; }
+
+/* === MOBILE === */
+@media (max-width: 700px) {
+    .app-grid { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr; }
+    .hero-planning h1 { font-size: 1.5rem; }
+    .card-address, .card-description { padding-right: 0; }
+    .status-badge { position: static; margin-bottom: 0.5rem; }
+}
