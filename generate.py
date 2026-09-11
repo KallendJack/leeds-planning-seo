@@ -307,7 +307,7 @@ async def build_sitemap(db: aiosqlite.Connection):
     for (t,) in types:
         urls.append(f"{SITE_URL}/{slugify(t)}/")
 
-    areas = await db.execute_fetchall("SELECT DISTINCT SUBSTR(postcode,1,3) FROM applications WHERE postcode LIKE 'LS%' AND postcode != ''")
+    areas = await db.execute_fetchall(f"SELECT DISTINCT {OUTCODE_SQL} FROM applications WHERE postcode LIKE 'LS%' AND postcode != ''")
     for (code,) in areas:
         urls.append(f"{SITE_URL}/postcode/{code.lower()}/")
 
