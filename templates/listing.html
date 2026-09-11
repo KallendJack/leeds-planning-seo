@@ -27,7 +27,7 @@
                 <span>{{ a.app_type }}{% if a.app_size %} &middot; {{ a.app_size }}{% endif %}</span>
                 {% if a.start_date %}<span>Submitted {{ a.start_date }}</span>{% endif %}
                 {% if a.decided_date %}<span>Decided {{ a.decided_date }}</span>{% endif %}
-                {% if a.postcode %}<a href="/postcode/{{ a.postcode[:3] | lower }}/" class="meta-link">{{ a.postcode }}</a>{% endif %}
+                {% if a.postcode %}<a href="/postcode/{{ a.postcode | outcode | lower }}/" class="meta-link">{{ a.postcode }}</a>{% endif %}
             </p>
         </div>
     </article>

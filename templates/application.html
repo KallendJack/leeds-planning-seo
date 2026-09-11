@@ -34,7 +34,7 @@
                     <dt>Status</dt><dd>{{ app.app_state }}</dd>
                     <dt>Submitted</dt><dd>{{ app.start_date or 'Unknown' }}</dd>
                     {% if app.decided_date %}<dt>Decided</dt><dd>{{ app.decided_date }}</dd>{% endif %}
-                    {% if app.postcode %}<dt>Postcode</dt><dd><a href="/postcode/{{ app.postcode[:3] | lower }}/">{{ app.postcode }}</a></dd>{% endif %}
+                    {% if app.postcode %}<dt>Postcode</dt><dd><a href="/postcode/{{ app.postcode | outcode | lower }}/">{{ app.postcode }}</a></dd>{% endif %}
                     {% if app.agent_name %}<dt>Agent</dt><dd>{{ app.agent_name }}{% if app.agent_company %}, {{ app.agent_company }}{% endif %}</dd>{% endif %}
                 </dl>
             </section>
@@ -69,7 +69,7 @@
                 {% else %}
                 <p>No nearby applications found.</p>
                 {% endif %}
-                <a href="/postcode/{% if app.postcode %}{{ app.postcode[:3] | lower }}{% else %}ls1{% endif %}/" class="btn-small">All applications in this area →</a>
+                <a href="/postcode/{% if app.postcode %}{{ app.postcode | outcode | lower }}{% else %}ls1{% endif %}/" class="btn-small">All applications in this area →</a>
             </section>
 
             {% if is_construction and affiliate_link %}

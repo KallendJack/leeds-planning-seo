@@ -73,7 +73,7 @@
                 <p class="card-description">{{ a.description[:120] }}{% if a.description|length > 120 %}&hellip;{% endif %}</p>
                 <p class="card-meta">
                     <span>{{ a.app_type }} &middot; {{ a.start_date }}</span>
-                    {% if a.postcode %}<a href="/postcode/{{ a.postcode[:3] | lower }}/" class="meta-link">{{ a.postcode[:3] }}</a>{% endif %}
+                    {% if a.postcode %}<a href="/postcode/{{ a.postcode | outcode | lower }}/" class="meta-link">{{ a.postcode | outcode }}</a>{% endif %}
                 </p>
             </div>
         </article>

@@ -30,6 +30,15 @@ CONSTRUCTION_KEYWORDS = [
 env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)), autoescape=select_autoescape(["html"]))
 
 
+def outcode(postcode: str) -> str:
+    """'LS20 8JB' -> 'LS20'.  Exposed to templates so nothing re-derives the
+    postcode area with a wrong fixed-width slice."""
+    return (postcode or "").split(" ")[0]
+
+
+env.filters["outcode"] = outcode
+
+
 def slugify(s: str) -> str:
     return s.lower().replace(" ", "-").replace("/", "-")
 
@@ -79,7 +88,7 @@ async def build_homepage(db: aiosqlite.Connection):
 
     postcode_rows = await db.execute_fetchall(f"""
         SELECT {OUTCODE_SQL} as code, COUNT(*) as cnt
-        FROM applications WHERE postcode LIKE 'LS%' AND postcode != ''
+        FROM applications WHERE postcode != ''
         GROUP BY code ORDER BY cnt DESC LIMIT 12
     """)
     postcode_areas = [{"code": r[0], "total": r[1]} for r in postcode_rows]
@@ -171,7 +180,7 @@ async def build_postcode_pages(db: aiosqlite.Connection):
 
     areas = await db.execute_fetchall(f"""
         SELECT {OUTCODE_SQL} as code, COUNT(*) as cnt
-        FROM applications WHERE postcode LIKE 'LS%' AND postcode != ''
+        FROM applications WHERE postcode != ''
         GROUP BY code ORDER BY cnt DESC
     """)
 
@@ -307,7 +316,7 @@ async def build_sitemap(db: aiosqlite.Connection):
     for (t,) in types:
         urls.append(f"{SITE_URL}/{slugify(t)}/")
 
-    areas = await db.execute_fetchall(f"SELECT DISTINCT {OUTCODE_SQL} FROM applications WHERE postcode LIKE 'LS%' AND postcode != ''")
+    areas = await db.execute_fetchall(f"SELECT DISTINCT {OUTCODE_SQL} FROM applications WHERE postcode != ''")
     for (code,) in areas:
         urls.append(f"{SITE_URL}/postcode/{code.lower()}/")
 
