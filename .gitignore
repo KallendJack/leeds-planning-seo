@@ -12,6 +12,10 @@ data/*.db
 data/*.db-shm
 data/*.db-wal
 
+# Cached last fetch (so a failed write can be retried without re-fetching)
+data/last_fetch.json.gz
+data/last_fetch.json.gz.tmp
+
 # Local misc
 .DS_Store
 *.log

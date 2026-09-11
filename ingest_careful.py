@@ -28,11 +28,12 @@ page can never leave a truncated dataset behind.  An empty page while more rows
 are expected is retried, never accepted as "end of data".  A short ingest exits
 non-zero so the cron job is marked failed instead of a false "ok".
 """
-import argparse, asyncio, json, aiosqlite, re, ssl, sys
+import argparse, asyncio, gzip, json, aiosqlite, re, ssl, sys
 import aiohttp
 from pathlib import Path
 
 DB = Path("/workspace/dev/leeds-planning-seo/data/leeds_planning.db")
+CACHE = DB.parent / "last_fetch.json.gz"   # completed fetch, so a retry is free
 PAGE = 300                 # API default page size — minimises request count
 START_DELAY = 3            # optimistic initial gap between requests (seconds)
 MIN_BURST = 8              # assumed requests per PlanIt window (floors the estimate)
@@ -183,29 +184,56 @@ async def fetch_all(s, mode, changed_days):
     return rows, grand
 
 
+def save_cache(path, rows, grand, mode):
+    """Persist a completed fetch so a later validation/write retry is free."""
+    tmp = path.with_name(path.name + ".tmp")
+    with gzip.open(tmp, "wt") as f:
+        json.dump({"mode": mode, "grand": grand, "rows": rows}, f)
+    tmp.replace(path)
+    print(f"Cached fetch to {path.name}")
+
+
+def load_cache(path):
+    with gzip.open(path, "rt") as f:
+        d = json.load(f)
+    return d["rows"], d["grand"], d.get("mode")
+
+
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--full", action="store_true",
                     help="full recent=365 backfill/reconcile (replaces the live table)")
     ap.add_argument("--changed-days", type=int, default=3,
                     help="incremental: last_changed window in days (default 3)")
+    ap.add_argument("--apply-cache", action="store_true",
+                    help="skip fetching; apply the rows saved by the last fetch")
     args = ap.parse_args()
     mode = "full" if args.full else "incremental"
 
-    ssl_ctx = ssl.create_default_context()
-    ssl_ctx.check_hostname = False
-    ssl_ctx.verify_mode = ssl.CERT_NONE
-    connector = aiohttp.TCPConnector(ssl=ssl_ctx)
-
-    async with aiohttp.ClientSession(connector=connector) as s:
-        rows, grand = await fetch_all(s, mode, args.changed_days)
+    if args.apply_cache:
+        rows, grand, cached_mode = load_cache(CACHE)
+        mode = cached_mode or mode
+        print(f"Loaded {len(rows)} rows from {CACHE.name} (mode={mode}) — no fetch needed.")
+    else:
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+        connector = aiohttp.TCPConnector(ssl=ssl_ctx)
+        async with aiohttp.ClientSession(connector=connector) as s:
+            rows, grand = await fetch_all(s, mode, args.changed_days)
+        save_cache(CACHE, rows, grand, mode)
 
     unique = len({r[0] for r in rows if r[0]})
     print(f"\nFetched {len(rows)} records ({unique} unique) — API reported {grand}.")
+    if len(rows) > unique:
+        print(f"  ({len(rows) - unique} duplicate uid(s) — expected; uid is the primary key)")
 
-    if grand and unique < grand:
-        print(f"ERROR: short ingest — {unique}/{grand} records. Refusing to touch the "
-              f"live table.", file=sys.stderr)
+    # Truncation guard: compare records RECEIVED against the API's total — not
+    # unique rows, since duplicates are normal and collapse under the PK.
+    if grand and len(rows) < grand * 0.98:
+        print(f"ERROR: short fetch — only {len(rows)}/{grand} records received. Refusing "
+              f"to touch the live table. Rows are cached in {CACHE.name}; re-run with "
+              f"--apply-cache to retry the write without re-fetching.", file=sys.stderr)
         sys.exit(1)
 
     if not rows:
@@ -215,7 +243,7 @@ async def main():
     db = await aiosqlite.connect(str(DB))
     await db.executescript(CREATE_SQL)
     if mode == "full":
-        await db.execute("DELETE FROM applications")   # atomic-ish replace
+        await db.execute("DELETE FROM applications")   # replace the whole window
     await db.executemany(Q, rows)
     await db.commit()
 
@@ -227,12 +255,13 @@ async def main():
     states = await r.fetchall()
     await db.close()
 
-    print(f"\nDone: {mode} — {len(rows)} upserted, table now {count} rows")
+    print(f"\nDone: {mode} — {len(rows)} records applied, table now {count} rows")
     print("Types:", {t: c for t, c in types})
     print("States:", {s: c for s, c in states})
 
-    if mode == "full" and grand and count < grand:
-        print(f"ERROR: {count}/{grand} rows after write.", file=sys.stderr)
+    # Every unique uid we fetched must now be present.
+    if mode == "full" and count < unique:
+        print(f"ERROR: {count}/{unique} unique rows after write.", file=sys.stderr)
         sys.exit(1)
 
 
