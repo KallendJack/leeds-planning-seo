@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <meta name="description" content="{{ meta_description }}">
+    <link rel="canonical" href="https://leedsplanning.org.uk{{ canonical_url }}">
+    <link rel="stylesheet" href="/static/style.css?v={{ build_timestamp }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="/" class="logo">🏗️ Leeds Planning</a>
+                <div class="nav-links">
+                    {% for t in nav_types %}
+                    <a href="/{{ t.slug }}/">{{ t.label }}</a>
+                    {% endfor %}
+                    <a href="/postcode/">By Postcode</a>
+                    <a href="/about/">About</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {% if not hide_breadcrumb %}
+        <nav class="breadcrumb">
+            <a href="/">Home</a>
+            {% for crumb in breadcrumbs %}
+            <span class="crumb-sep">&rsaquo;</span> <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+            {% endfor %}
+            {% if current_crumb %}
+            <span class="crumb-sep">&rsaquo;</span> <span class="crumb-current">{{ current_crumb }}</span>
+            {% endif %}
+        </nav>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div>
+                    <strong>Leeds Planning</strong>
+                    <p>Track planning applications across Leeds. Free public data from Leeds City Council via PlanIt.</p>
+                </div>
+                <div>
+                    <strong>Planning a project?</strong>
+                    <p><a href="{{ affiliate_link or '#' }}" target="_blank" rel="nofollow sponsored">Get free quotes from local tradespeople on Bark.com →</a></p>
+                </div>
+            </div>
+            <p class="footer-bottom">Data sourced from <a href="https://planit.org.uk">PlanIt.org.uk</a> and <a href="https://publicaccess.leeds.gov.uk">Leeds City Council</a> under the Open Government Licence. <a href="/about/">About</a>.</p>
+
+            <div class="legal-disclaimer" style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--gray-200);font-size:0.8rem;color:var(--gray-600);line-height:1.7;">
+                <p style="margin-bottom:0.75rem;"><strong>Independence Notice:</strong> leedsplanning.org.uk is an independent, privately operated community resource that aggregates public planning data. This website is not affiliated with, operated by, or endorsed by Leeds City Council or any government authority.</p>
+                <p><strong>Affiliate Disclosure:</strong> To keep this service free, we partner with local trade networks. If you request a quote or click through a partner link on this website, we may earn a referral commission at no additional cost to you.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

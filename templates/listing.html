@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="page-heading">{{ heading }}</h1>
+<p class="results-summary">{{ total }} applications found{% if sorted_by %}, sorted by {{ sorted_by }}{% endif %}.</p>
+
+<div class="app-list">
+    {% for a in applications %}
+    <article class="app-card">
+        <div class="card-inner">
+            <span class="status-badge status-{{ a.app_state | lower | replace(' ','-') }}">
+                {% if a.app_state in ['Permitted','Approved'] %}
+                    <span class="badge-dot"></span> Approved
+                {% elif a.app_state == 'Undecided' %}
+                    <span class="badge-dot"></span> Awaiting Decision
+                {% elif a.app_state in ['Refused','Rejected'] %}
+                    <span class="badge-dot"></span> Refused
+                {% elif a.app_state == 'Withdrawn' %}
+                    <span class="badge-dot"></span> Withdrawn
+                {% else %}
+                    <span class="badge-dot"></span> {{ a.app_state }}
+                {% endif %}
+            </span>
+            <h2 class="card-address"><a href="/application/{{ a.uid | replace('/','_') }}/">{{ (a.address or 'Unknown address')[:70] }}</a></h2>
+            <p class="card-description">{{ a.description[:120] }}{% if a.description|length > 120 %}&hellip;{% endif %}</p>
+            <p class="card-meta">
+                <span>{{ a.app_type }}{% if a.app_size %} &middot; {{ a.app_size }}{% endif %}</span>
+                {% if a.start_date %}<span>Submitted {{ a.start_date }}</span>{% endif %}
+                {% if a.decided_date %}<span>Decided {{ a.decided_date }}</span>{% endif %}
+                {% if a.postcode %}<a href="/postcode/{{ a.postcode[:3] | lower }}/" class="meta-link">{{ a.postcode }}</a>{% endif %}
+            </p>
+        </div>
+    </article>
+    {% if loop.index % 5 == 0 and affiliate_link %}
+    <div class="affiliate-banner">
+        <div class="banner-content">
+            <div class="banner-text">Planning an extension or renovation in Leeds?</div>
+            <div class="banner-sub">Compare free, no-obligation quotes from rated local tradespeople.</div>
+        </div>
+        <a href="{{ affiliate_link }}" target="_blank" rel="nofollow sponsored" class="banner-btn">Get Quotes →</a>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<nav class="pagination">
+    {% if current_page > 1 %}
+        <a href="{{ base_url }}page/{{ current_page - 1 }}/" class="prev">&lsaquo; Previous</a>
+    {% endif %}
+    <span class="page-info">Page {{ current_page }} of {{ total_pages }}</span>
+    {% if current_page < total_pages %}
+        <a href="{{ base_url }}page/{{ current_page + 1 }}/" class="next">Next &rsaquo;</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% if related_links %}
+<section class="related">
+    <h2>Also see</h2>
+    <ul>
+        {% for rel in related_links %}
+        <li><a href="{{ rel.url }}">{{ rel.label }}</a></li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+{% endblock %}

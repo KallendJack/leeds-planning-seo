@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="hero hero-planning">
+    <h1>Planning Applications in Leeds</h1>
+    <p class="hero-subtitle">Track every planning application submitted to Leeds City Council. {{ stats.total | int }} applications this year — extensions, new builds, loft conversions, and more.</p>
+</section>
+
+<section class="quick-stats">
+    <div class="stat-card stat-good">
+        <span class="stat-number">{{ stats.full | int }}</span>
+        <span class="stat-label">Full Applications</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ stats.undecided | int }}</span>
+        <span class="stat-label">Under Review</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ stats.permitted | int }}</span>
+        <span class="stat-label">Approved</span>
+    </div>
+    <div class="stat-card stat-bad">
+        <span class="stat-number">{{ stats.refused | int }}</span>
+        <span class="stat-label">Refused</span>
+    </div>
+</section>
+
+<section class="explore">
+    <h2>What's Being Built?</h2>
+    <div class="explore-grid">
+        {% for type in top_types %}
+        <a href="/{{ type.slug }}/" class="explore-card">
+            <span class="explore-icon">{{ type.icon }}</span>
+            <h3>{{ type.label }}</h3>
+            <p>{{ type.count }} applications this year</p>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="by-postcode">
+    <h2>Planning by Postcode</h2>
+    <div class="postcode-grid">
+        {% for pc in postcode_areas %}
+        <a href="/postcode/{{ pc.code | lower }}/" class="postcode-card">
+            <strong>{{ pc.code }}</strong>
+            <span>{{ pc.total }} applications</span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="recent">
+    <h2>Latest Applications</h2>
+    <div class="app-list">
+        {% for a in recent %}
+        <article class="app-card">
+            <div class="card-inner">
+                <span class="status-badge status-{{ a.app_state | lower | replace(' ','-') }}">
+                    {% if a.app_state in ['Permitted','Approved'] %}
+                        <span class="badge-dot"></span> Approved
+                    {% elif a.app_state == 'Undecided' %}
+                        <span class="badge-dot"></span> Awaiting Decision
+                    {% elif a.app_state in ['Refused','Rejected'] %}
+                        <span class="badge-dot"></span> Refused
+                    {% elif a.app_state == 'Withdrawn' %}
+                        <span class="badge-dot"></span> Withdrawn
+                    {% else %}
+                        <span class="badge-dot"></span> {{ a.app_state }}
+                    {% endif %}
+                </span>
+                <h3 class="card-address"><a href="/application/{{ a.uid | replace('/','_') }}/">{{ (a.address or 'Unknown')[:70] }}</a></h3>
+                <p class="card-description">{{ a.description[:120] }}{% if a.description|length > 120 %}&hellip;{% endif %}</p>
+                <p class="card-meta">
+                    <span>{{ a.app_type }} &middot; {{ a.start_date }}</span>
+                    {% if a.postcode %}<a href="/postcode/{{ a.postcode[:3] | lower }}/" class="meta-link">{{ a.postcode[:3] }}</a>{% endif %}
+                </p>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+{% endblock %}

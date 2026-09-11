@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+
+<article class="app-detail-page">
+    <header class="app-header">
+        <span class="status-badge status-{{ app.app_state | lower | replace(' ','-') }}" style="position:static;">
+            {% if app.app_state in ['Permitted','Approved'] %}
+                <span class="badge-dot"></span> Approved
+            {% elif app.app_state == 'Undecided' %}
+                <span class="badge-dot"></span> Awaiting Decision
+            {% elif app.app_state in ['Refused','Rejected'] %}
+                <span class="badge-dot"></span> Refused
+            {% elif app.app_state == 'Withdrawn' %}
+                <span class="badge-dot"></span> Withdrawn
+            {% else %}
+                <span class="badge-dot"></span> {{ app.app_state }}
+            {% endif %}
+        </span>
+        <h1>{{ app.address or 'Unknown address' }}</h1>
+    </header>
+
+    <div class="app-grid">
+        <div class="app-main">
+            <section class="app-description">
+                <h2>Proposal</h2>
+                <p>{{ app.description or 'No description available.' }}</p>
+            </section>
+
+            <section class="app-details">
+                <h2>Details</h2>
+                <dl>
+                    <dt>Reference</dt><dd>{{ app.uid }}</dd>
+                    <dt>Type</dt><dd>{{ app.app_type }}{% if app.app_size %} ({{ app.app_size }}){% endif %}</dd>
+                    <dt>Status</dt><dd>{{ app.app_state }}</dd>
+                    <dt>Submitted</dt><dd>{{ app.start_date or 'Unknown' }}</dd>
+                    {% if app.decided_date %}<dt>Decided</dt><dd>{{ app.decided_date }}</dd>{% endif %}
+                    {% if app.postcode %}<dt>Postcode</dt><dd><a href="/postcode/{{ app.postcode[:3] | lower }}/">{{ app.postcode }}</a></dd>{% endif %}
+                    {% if app.agent_name %}<dt>Agent</dt><dd>{{ app.agent_name }}{% if app.agent_company %}, {{ app.agent_company }}{% endif %}</dd>{% endif %}
+                </dl>
+            </section>
+
+            {% if app.url %}
+            <section class="app-source">
+                <a href="{{ app.url }}" class="btn" target="_blank" rel="noopener">View on Leeds Council Portal →</a>
+            </section>
+            {% endif %}
+        </div>
+
+        <aside class="app-sidebar">
+            {% if app.latitude and app.longitude %}
+            <section class="app-map">
+                <h3>Location</h3>
+                <div class="map-preview">
+                    <a href="https://www.google.com/maps?q={{ app.latitude }},{{ app.longitude }}" target="_blank" rel="noopener">
+                        📍 View on Google Maps
+                    </a>
+                </div>
+            </section>
+            {% endif %}
+
+            <section class="app-nearby">
+                <h3>Nearby Applications</h3>
+                {% if nearby %}
+                <ul>
+                    {% for n in nearby %}
+                    <li><a href="/application/{{ n.uid | replace('/','_') }}/">{{ (n.address or 'Unknown')[:40] }}</a> — {{ n.app_type }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p>No nearby applications found.</p>
+                {% endif %}
+                <a href="/postcode/{% if app.postcode %}{{ app.postcode[:3] | lower }}{% else %}ls1{% endif %}/" class="btn-small">All applications in this area →</a>
+            </section>
+
+            {% if is_construction and affiliate_link %}
+            <section class="affiliate-cta">
+                <h3>🏗️ Planning something similar?</h3>
+                <p>Get free quotes from trusted local Leeds builders and architects on Bark.com — no obligation, fast responses.</p>
+                <a href="{{ affiliate_link }}" target="_blank" rel="nofollow sponsored" class="btn btn-primary">Get Free Quotes →</a>
+            </section>
+            {% endif %}
+        </aside>
+    </div>
+</article>
+
+{% endblock %}
