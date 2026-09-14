@@ -6,6 +6,8 @@
     <title>{{ title }}</title>
     <meta name="description" content="{{ meta_description }}">
     <link rel="canonical" href="https://leedsplanning.org.uk{{ canonical_url }}">
+    {% if jsonld %}<script type="application/ld+json">{{ jsonld | safe }}</script>
+    {% endif %}
     <link rel="stylesheet" href="/static/style.css?v={{ build_timestamp }}">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
 </head>

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Leeds Planning SEO — Static Site Generator. Reads SQLite → Jinja2 → static HTML."""
 
-import asyncio, aiosqlite, math, shutil, time
+import asyncio, aiosqlite, json, math, re, shutil, time
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -37,6 +37,83 @@ def outcode(postcode: str) -> str:
 
 
 env.filters["outcode"] = outcode
+
+
+# --- <title> construction -------------------------------------------------
+# Full UK postcode at the end of an address, e.g. "... Leeds LS15 4NJ"
+POSTCODE_RE = re.compile(r"([A-Z]{1,2}\d{1,2}[A-Z]?)\s*(\d[A-Z]{2})\s*$", re.I)
+TITLE_SUFFIX = " | Leeds Planning"
+TITLE_LIMIT = 68
+
+
+def build_title(address: str, app_type: str = "", limit: int = TITLE_LIMIT) -> str:
+    """Word-boundary-safe <title> for an application page.
+
+    The old code used ``address[:40]``, which chopped mid-word and produced
+    titles like "Fox And Grapes York Road Scholes Leeds L — Full", shipped on
+    every one of the ~7k application pages.  Here the address is cut on a
+    space and the postcode tail is preserved when it fits, so a long title
+    keeps both readable words and a local-search signal.
+    """
+    addr = " ".join((address or "").split()).strip(" ,")
+    if not addr:
+        addr = "Planning Application"
+
+    tail = (f" — {app_type}" if app_type else "") + TITLE_SUFFIX
+    budget = max(24, limit - len(tail))
+
+    if len(addr) > budget:
+        m = POSTCODE_RE.search(addr)
+        postcode = f"{m.group(1).upper()} {m.group(2).upper()}" if m else ""
+        head = addr[:m.start()].strip(" ,") if m else addr
+
+        if postcode and len(postcode) + 4 <= budget - 10:
+            room = budget - len(postcode) - 2      # 2 = "… "
+            if len(head) > room:
+                head = head[:room]
+                head = head[:head.rindex(" ")] if " " in head else head
+            addr = f"{head.rstrip(' ,')}… {postcode}"
+        else:
+            cut = addr[:budget]
+            cut = cut[:cut.rindex(" ")] if " " in cut else cut
+            addr = cut.rstrip(" ,") + "…"
+
+    return f"{addr}{tail}"
+
+
+# --- structured data ------------------------------------------------------
+def jsonld_dump(obj) -> str:
+    """Serialise JSON-LD safely for inline <script> (no </script> breakout)."""
+    s = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+    return (s.replace("<", "\\u003c").replace(">", "\\u003e")
+             .replace("&", "\\u0026"))
+
+
+def _website_node() -> dict:
+    return {"@type": "WebSite", "@id": f"{SITE_URL}/#website", "url": f"{SITE_URL}/",
+            "name": "Leeds Planning", "inLanguage": "en-GB"}
+
+
+def _breadcrumb_node(crumbs: list) -> dict:
+    """crumbs: [(name, url_path), ...] — must mirror the visible breadcrumb."""
+    return {"@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": i + 1, "name": name, "item": f"{SITE_URL}{path}"}
+        for i, (name, path) in enumerate(crumbs)]}
+
+
+def page_jsonld(title: str, description: str, path: str, crumbs=None, extra=None) -> str:
+    url = f"{SITE_URL}{path}"
+    graph = [
+        _website_node(),
+        {"@type": "WebPage", "@id": url, "url": url, "name": title,
+         "description": description, "inLanguage": "en-GB",
+         "isPartOf": {"@id": f"{SITE_URL}/#website"}},
+    ]
+    if crumbs:
+        graph.append(_breadcrumb_node(crumbs))
+    if extra:
+        graph.extend(extra)
+    return jsonld_dump({"@context": "https://schema.org", "@graph": graph})
 
 
 def slugify(s: str) -> str:
@@ -99,11 +176,20 @@ async def build_homepage(db: aiosqlite.Connection):
     """)
     recent = [dict(zip(["uid","address","description","app_type","app_size","app_state","start_date","postcode"], r)) for r in recent_rows]
 
-    html = tpl.render(title="Leeds Planning Applications — Track What's Being Built",
-                      meta_description=f"Track {stats['total']} planning applications in Leeds this year. Extensions, new builds, loft conversions, and more.",
+    home_title = "Leeds Planning Applications — Track What's Being Built"
+    home_desc = f"Track {stats['total']} planning applications in Leeds this year. Extensions, new builds, loft conversions, and more."
+    html = tpl.render(title=home_title,
+                      meta_description=home_desc,
                       canonical_url="/", stats=stats, top_types=top_types,
                       postcode_areas=postcode_areas, recent=recent, breadcrumbs=[],
-                      hide_breadcrumb=True)
+                      hide_breadcrumb=True,
+                      jsonld=page_jsonld(
+                          home_title, home_desc, "/",
+                          extra=[{"@type": "Place", "name": "Leeds",
+                                  "address": {"@type": "PostalAddress",
+                                              "addressLocality": "Leeds",
+                                              "addressRegion": "West Yorkshire",
+                                              "addressCountry": "GB"}}]))
     write_html(OUTPUT_DIR / "index.html", html)
 
 
@@ -126,13 +212,51 @@ async def build_application_pages(db: aiosqlite.Connection):
             )
             nearby = [{"uid": r[0], "address": r[1], "app_type": r[2]} for r in near_rows]
 
+        title = build_title(app.get("address", ""), app.get("app_type", ""))
+        app_path = f"/application/{app['uid'].replace('/','_')}/"
+        app_desc = f"{app.get('description','')[:150]}. {app.get('app_state','')}. Reference: {app.get('uid','')}."
+
+        # Visible breadcrumb + matching JSON-LD.  These are ~7k internal links
+        # into the postcode and type hubs, which is what we want crawled.
+        # base.html renders the leading "Home" link itself, so `crumbs` omits it.
+        crumbs = []
+        crumb_pairs = [("Home", "/")]
+        if app.get("postcode"):
+            oc = app["postcode"].split()[0]
+            crumbs.append({"url": f"/postcode/{oc.lower()}/", "label": oc.upper()})
+            crumb_pairs.append((oc.upper(), f"/postcode/{oc.lower()}/"))
+        if app.get("app_type"):
+            slug = slugify(app["app_type"])
+            crumbs.append({"url": f"/{slug}/", "label": app["app_type"]})
+            crumb_pairs.append((app["app_type"], f"/{slug}/"))
+        crumb_pairs.append((app["uid"], app_path))
+
+        place = {"@type": "Place", "name": app.get("address") or "Leeds"}
+        address = {"@type": "PostalAddress", "addressLocality": "Leeds",
+                   "addressRegion": "West Yorkshire", "addressCountry": "GB"}
+        if app.get("address"):
+            address["streetAddress"] = app["address"]
+        if app.get("postcode"):
+            address["postalCode"] = app["postcode"]
+        place["address"] = address
+        try:
+            if app.get("latitude") and app.get("longitude"):
+                place["geo"] = {"@type": "GeoCoordinates",
+                                "latitude": float(app["latitude"]),
+                                "longitude": float(app["longitude"])}
+        except (TypeError, ValueError):
+            pass
+
         html = tpl.render(
-            title=f"{app.get('address','Planning Application')[:40]} — {app.get('app_type','')} | Leeds Planning",
-            meta_description=f"{app.get('description','')[:150]}. {app.get('app_state','')}. Reference: {app.get('uid','')}.",
-            canonical_url=f"/application/{app['uid'].replace('/','_')}/",
-            app=app, nearby=nearby, breadcrumbs=[],
+            title=title,
+            meta_description=app_desc,
+            canonical_url=app_path,
+            app=app, nearby=nearby, breadcrumbs=crumbs,
+            current_crumb=app["uid"],
             is_construction=is_construction(app),
             affiliate_link=AFFILIATE_LINK,
+            jsonld=page_jsonld(title, app_desc, app_path,
+                               crumbs=crumb_pairs, extra=[place]),
         )
         write_html(OUTPUT_DIR / "application" / app["uid"].replace("/", "_") / "index.html", html)
         count += 1
@@ -157,10 +281,13 @@ async def build_listing_pages(db: aiosqlite.Connection):
             batch = rows[(page-1)*PAGE_SIZE:page*PAGE_SIZE]
             subdir = f"page/{page}" if page > 1 else ""
 
+            ld_title = f"{app_type} Planning Applications — Leeds"
+            ld_desc = f"{total} {app_type.lower()} planning applications in Leeds this year. Track decisions and see locations."
+            ld_path = f"/{slug}/" + (f"page/{page}/" if page > 1 else "")
             html = tpl.render(
-                title=f"{app_type} Planning Applications — Leeds",
-                meta_description=f"{total} {app_type.lower()} planning applications in Leeds this year. Track decisions and see locations.",
-                canonical_url=f"/{slug}/" + (f"page/{page}/" if page > 1 else ""),
+                title=ld_title,
+                meta_description=ld_desc,
+                canonical_url=ld_path,
                 heading=f"{app_type} Applications in Leeds",
                 total=len(rows), current_page=page,
                 total_pages=max(1, math.ceil(len(rows)/PAGE_SIZE)),
@@ -169,6 +296,10 @@ async def build_listing_pages(db: aiosqlite.Connection):
                 breadcrumbs=[], current_crumb=app_type,
                 sorted_by="date (newest first)",
                 related_links=[{"url": f"/postcode/", "label": "Browse by postcode area"}],
+                jsonld=page_jsonld(
+                    ld_title, ld_desc, ld_path,
+                    crumbs=[("Home", "/"), (app_type, f"/{slug}/")]
+                           + ([(f"Page {page}", ld_path)] if page > 1 else [])),
             )
             write_html(dir / subdir / "index.html" if subdir else dir / "index.html", html)
     print(f"  {len(types)} type pages")
@@ -189,6 +320,10 @@ async def build_postcode_pages(db: aiosqlite.Connection):
         f'<a href="/postcode/{code.lower()}/" class="postcode-card"><strong>{code}</strong><span>{cnt} applications</span></a>'
         for code, cnt in areas
     )
+    pc_ld = page_jsonld(
+        "Planning Applications by Postcode — Leeds",
+        "Browse planning applications by Leeds postcode area. Find what's being built in LS1, LS6, LS8 and more.",
+        "/postcode/", crumbs=[("Home", "/"), ("Postcodes", "/postcode/")])
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -197,6 +332,7 @@ async def build_postcode_pages(db: aiosqlite.Connection):
     <title>Planning Applications by Postcode — Leeds</title>
     <meta name="description" content="Browse planning applications by Leeds postcode area. Find what's being built in LS1, LS6, LS8 and more.">
     <link rel="canonical" href="{SITE_URL}/postcode/">
+    <script type="application/ld+json">{pc_ld}</script>
     <link rel="stylesheet" href="/static/style.css?v={int(time.time())}">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
 </head>
@@ -235,10 +371,13 @@ async def build_postcode_pages(db: aiosqlite.Connection):
             batch = rows[(page-1)*PAGE_SIZE:page*PAGE_SIZE]
             subdir = f"page/{page}" if page > 1 else ""
 
+            pc_title = f"Planning Applications in {code.upper()} — Leeds"
+            pc_desc = f"{len(rows)} planning applications in {code.upper()} Leeds. Extensions, new builds, tree works and more."
+            pc_path = f"/postcode/{code.lower()}/" + (f"page/{page}/" if page > 1 else "")
             html = tpl.render(
-                title=f"Planning Applications in {code.upper()} — Leeds",
-                meta_description=f"{len(rows)} planning applications in {code.upper()} Leeds. Extensions, new builds, tree works and more.",
-                canonical_url=f"/postcode/{code.lower()}/" + (f"page/{page}/" if page > 1 else ""),
+                title=pc_title,
+                meta_description=pc_desc,
+                canonical_url=pc_path,
                 heading=f"Planning in {code.upper()}",
                 total=len(rows), current_page=page,
                 total_pages=max(1, math.ceil(len(rows)/PAGE_SIZE)),
@@ -247,6 +386,11 @@ async def build_postcode_pages(db: aiosqlite.Connection):
                 breadcrumbs=[{"url":"/postcode/","label":"Postcodes"}], current_crumb=code.upper(),
                 sorted_by="date (newest first)",
                 related_links=[],
+                jsonld=page_jsonld(
+                    pc_title, pc_desc, pc_path,
+                    crumbs=[("Home", "/"), ("Postcodes", "/postcode/"),
+                            (code.upper(), f"/postcode/{code.lower()}/")]
+                           + ([(f"Page {page}", pc_path)] if page > 1 else [])),
             )
             write_html(dir / subdir / "index.html" if subdir else dir / "index.html", html)
     print(f"  {len(areas)} postcode area pages")
@@ -259,6 +403,10 @@ async def build_about_page():
     nav_links = ""
     for t in env.globals.get("nav_types", []):
         nav_links += f'<a href="/{t["slug"]}/">{t["label"]}</a>\n'
+    about_ld = page_jsonld(
+        "About — Leeds Planning",
+        "About Leeds Planning — tracking planning applications across Leeds from public council data.",
+        "/about/", crumbs=[("Home", "/"), ("About", "/about/")])
     html = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -267,6 +415,7 @@ async def build_about_page():
     <title>About — Leeds Planning</title>
     <meta name="description" content="About Leeds Planning — tracking planning applications across Leeds from public council data.">
     <link rel="canonical" href="{SITE_URL}/about/">
+    <script type="application/ld+json">{about_ld}</script>
     <link rel="stylesheet" href="/static/style.css?v={ts}">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
 </head>
@@ -300,32 +449,42 @@ async def build_about_page():
         </div>
     </footer>
 </body>
-</html>""".format(SITE_URL=SITE_URL, ts=ts, nav_links=nav_links)
+</html>""".format(SITE_URL=SITE_URL, ts=ts, nav_links=nav_links, about_ld=about_ld)
     write_html(OUTPUT_DIR / "about" / "index.html", html)
 
 
 async def build_sitemap(db: aiosqlite.Connection):
     print("Building sitemap...")
-    urls = [f"{SITE_URL}/", f"{SITE_URL}/about/"]
+    today = time.strftime("%Y-%m-%d", time.gmtime())
 
-    rows = await db.execute_fetchall("SELECT uid FROM applications")
-    for (uid,) in rows:
-        urls.append(f"{SITE_URL}/application/{uid.replace('/','_')}/")
+    # url -> lastmod.  Google weighs lastmod when deciding what to recrawl;
+    # this site rebuilds daily, so without it every one of the ~7k URLs looks
+    # equally stale and the crawl is spread blindly across all of them.
+    # Application pages use the council record's own last-changed date (the
+    # page content only changes when the record does); hubs change daily.
+    urls = {f"{SITE_URL}/": today, f"{SITE_URL}/about/": today, f"{SITE_URL}/postcode/": today}
+
+    rows = await db.execute_fetchall(
+        "SELECT uid, last_changed, start_date, decided_date FROM applications")
+    for uid, last_changed, start_date, decided_date in rows:
+        stamp = str(last_changed or start_date or decided_date or "")
+        urls[f"{SITE_URL}/application/{uid.replace('/','_')}/"] = stamp[:10] or today
 
     types = await db.execute_fetchall("SELECT DISTINCT app_type FROM applications")
     for (t,) in types:
-        urls.append(f"{SITE_URL}/{slugify(t)}/")
+        urls[f"{SITE_URL}/{slugify(t)}/"] = today
 
     areas = await db.execute_fetchall(f"SELECT DISTINCT {OUTCODE_SQL} FROM applications WHERE postcode != ''")
     for (code,) in areas:
-        urls.append(f"{SITE_URL}/postcode/{code.lower()}/")
+        urls[f"{SITE_URL}/postcode/{code.lower()}/"] = today
 
-    xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    for url in sorted(set(urls)):
-        xml += f"  <url><loc>{url}</loc></url>\n"
-    xml += "</urlset>\n"
-    write_html(OUTPUT_DIR / "sitemap.xml", xml)
-    print(f"  {len(set(urls))} URLs")
+    xml = ['<?xml version="1.0" encoding="UTF-8"?>',
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for url in sorted(urls):
+        xml.append(f"  <url><loc>{url}</loc><lastmod>{urls[url]}</lastmod></url>")
+    xml.append("</urlset>")
+    write_html(OUTPUT_DIR / "sitemap.xml", "\n".join(xml) + "\n")
+    print(f"  {len(urls)} URLs")
 
 
 def clean_output():
