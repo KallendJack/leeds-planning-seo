@@ -8,7 +8,7 @@ ROOT = Path(__file__).parent
 src, dst = ROOT / "output_staging", ROOT / "output"
 
 if not src.is_dir():
-    raise SystemExit("no output_staging/ — run build_staging.py first")
+    raise SystemExit("no output_staging/ - run build_staging.py first")
 
 copied = 0
 for f in src.rglob("*"):

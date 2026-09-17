@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Leeds Planning SEO — Data Pipeline
+Leeds Planning SEO - Data Pipeline
 Fetches planning applications from PlanIt.org.uk API → SQLite.
 
 PlanIt is a free aggregator of all UK council planning portals.
@@ -96,7 +96,7 @@ async def fetch_page(session: aiohttp.ClientSession, params: dict) -> dict:
                     import re
                     m = re.search(r"in (\d+)s", err)
                     wait = int(m.group(1)) if m else 60
-                    log.warning(f"Rate limited: '{err}' — waiting {wait}s")
+                    log.warning(f"Rate limited: '{err}' - waiting {wait}s")
                     await asyncio.sleep(min(wait, 300))
                     continue
                 if err:

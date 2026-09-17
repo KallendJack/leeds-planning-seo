@@ -1,5 +1,5 @@
 #!/bin/bash
-# Leeds Planning — daily incremental refresh (runs at 6am UTC).
+# Leeds Planning - daily incremental refresh (runs at 6am UTC).
 # Upserts only applications changed in the last few days (~1 API request),
 # then rebuilds the site.
 set -eo pipefail
@@ -18,7 +18,7 @@ fi
 # Guard 2: never allow two runs to overlap (shared with the weekly full job).
 exec 9>"$LOCK"
 if ! flock -n 9; then
-    echo "[guard] Another leeds-planning run is already in progress — exiting."
+    echo "[guard] Another leeds-planning run is already in progress - exiting."
     exit 0
 fi
 

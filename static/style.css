@@ -1,4 +1,4 @@
-/* Leeds Planning — standardized UK directory */
+/* Leeds Planning - standardized UK directory */
 :root {
     --slate-50: #f8fafc; --slate-100: #f1f5f9; --slate-200: #e2e8f0;
     --slate-300: #cbd5e1; --slate-400: #94a3b8; --slate-500: #64748b;
@@ -102,7 +102,7 @@ nav { display: flex; align-items: center; justify-content: space-between; flex-w
 .app-card:hover { box-shadow: var(--card-hover-shadow); border-color: var(--card-hover-border); transform: translateY(-2px); }
 .card-inner { padding: 1.25rem; position: relative; }
 
-/* Status badge — top-right pill */
+/* Status badge - top-right pill */
 .status-badge {
     position: absolute; top: 1.25rem; right: 1.25rem;
     display: inline-flex; align-items: center; gap: 0.375rem;

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Leeds Planning SEO — Static Site Generator. Reads SQLite → Jinja2 → static HTML."""
+"""Leeds Planning SEO - Static Site Generator. Reads SQLite → Jinja2 → static HTML."""
 
 import asyncio, aiosqlite, json, math, re, shutil, time
 from pathlib import Path
@@ -13,11 +13,11 @@ PAGE_SIZE = 50
 SITE_URL = "https://leedsplanning.org.uk"
 
 # A UK postcode's "outcode" is the part before the space: "LS20 8JB" -> "LS20".
-# Taking a fixed 3-char prefix is wrong — it folds LS20-LS29 all into "LS2".
+# Taking a fixed 3-char prefix is wrong - it folds LS20-LS29 all into "LS2".
 OUTCODE_SQL = ("CASE WHEN INSTR(postcode,' ') > 0 "
                "THEN SUBSTR(postcode,1,INSTR(postcode,' ')-1) ELSE postcode END")
 
-# Affiliate link — drop in your Bark.com / Awin link here when ready
+# Affiliate link - drop in your Bark.com / Awin link here when ready
 AFFILIATE_LINK = ""
 
 # Keywords that trigger the "get quotes" affiliate CTA on application detail pages
@@ -50,7 +50,7 @@ def build_title(address: str, app_type: str = "", limit: int = TITLE_LIMIT) -> s
     """Word-boundary-safe <title> for an application page.
 
     The old code used ``address[:40]``, which chopped mid-word and produced
-    titles like "Fox And Grapes York Road Scholes Leeds L — Full", shipped on
+    titles like "Fox And Grapes York Road Scholes Leeds L - Full", shipped on
     every one of the ~7k application pages.  Here the address is cut on a
     space and the postcode tail is preserved when it fits, so a long title
     keeps both readable words and a local-search signal.
@@ -95,7 +95,7 @@ def _website_node() -> dict:
 
 
 def _breadcrumb_node(crumbs: list) -> dict:
-    """crumbs: [(name, url_path), ...] — must mirror the visible breadcrumb."""
+    """crumbs: [(name, url_path), ...] - must mirror the visible breadcrumb."""
     return {"@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": i + 1, "name": name, "item": f"{SITE_URL}{path}"}
         for i, (name, path) in enumerate(crumbs)]}
@@ -315,7 +315,7 @@ async def build_postcode_pages(db: aiosqlite.Connection):
         GROUP BY code ORDER BY cnt DESC
     """)
 
-    # Build postcode index as a proper grid page — not using listing template
+    # Build postcode index as a proper grid page - not using listing template
     cards = "\n".join(
         f'<a href="/postcode/{code.lower()}/" class="postcode-card"><strong>{code}</strong><span>{cnt} applications</span></a>'
         for code, cnt in areas
