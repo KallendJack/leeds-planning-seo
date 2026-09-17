@@ -76,7 +76,8 @@ per application, plus hubs per postcode outcode and per application type.
   links into the postcode and type hubs.
 - Application `<title>`s are built by `build_title()`, which truncates on a word
   boundary and keeps the postcode tail. Do **not** go back to `address[:40]`,
-  which chopped mid-word and shipped `...Scholes Leeds L - Full` on every page.
+  which chopped mid-word and shipped titles cut off like `...Scholes Leeds L`
+  on every page.
 
 ## Data notes
 
